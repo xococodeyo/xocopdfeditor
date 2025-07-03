@@ -3,6 +3,9 @@ from tkinter import filedialog, messagebox, Canvas, Scrollbar, simpledialog, col
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
 import os
+import platform
+import subprocess
+import tempfile
 
 class TextPropertiesDialog(simpledialog.Dialog):
     def __init__(self, parent, title="Text Properties"):
@@ -97,6 +100,7 @@ class PDFEditor:
         menubar.add_cascade(label="File", menu=self.file_menu)
         self.file_menu.add_command(label="Open PDF", command=self.open_pdf)
         self.file_menu.add_command(label="Save PDF As...", command=self.save_pdf)
+        self.file_menu.add_command(label="View to Print...", command=self.print_pdf)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=self.root.quit)
         # Edit Menu
@@ -380,11 +384,19 @@ class PDFEditor:
     def save_pdf(self):
         if self.current_action: self.cancel_current_action()
         if not self.pdf_document or not self.file_path: return
-        save_path = filedialog.asksaveasfilename(initialdir=os.path.dirname(self.file_path),
-                                                 initialfile=f"{os.path.splitext(os.path.basename(self.file_path))[0]}_edited.pdf",
-                                                 defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
+        
+        save_path = filedialog.asksaveasfilename(
+            initialdir=os.path.dirname(self.file_path),
+            initialfile=f"{os.path.splitext(os.path.basename(self.file_path))[0]}_edited.pdf",
+            defaultextension=".pdf",
+            filetypes=[("PDF Files", "*.pdf")]
+        )
         if not save_path: return
 
+        if self._save_document(save_path):
+            messagebox.showinfo("Success", f"PDF saved successfully to {save_path}")
+
+    def _save_document(self, save_path):
         try:
             doc = fitz.open(self.file_path)
             for img_data in self.images_to_embed:
@@ -402,9 +414,46 @@ class PDFEditor:
 
             doc.save(save_path, garbage=4, deflate=True, clean=True)
             doc.close()
-            messagebox.showinfo("Success", f"PDF saved successfully to {save_path}")
+            return True
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save PDF: {e}")
+            return False
+
+    def print_pdf(self):
+        if self.current_action: self.cancel_current_action()
+        if not self.pdf_document:
+            messagebox.showwarning("Print Error", "Please open a PDF file first.")
+            return
+
+        try:
+            fd, temp_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(fd)
+
+            if not self._save_document(temp_path):
+                if os.path.exists(temp_path): os.unlink(temp_path)
+                return
+
+            current_os = platform.system()
+            try:
+                if current_os == "Windows":
+                    os.startfile(temp_path)
+                elif current_os == "Darwin":
+                    subprocess.call(["open", temp_path])
+                elif current_os == "Linux":
+                    subprocess.call(["xdg-open", temp_path])
+                else:
+                    messagebox.showerror("Unsupported OS", f"Printing is not supported on {current_os}.")
+                    if os.path.exists(temp_path): os.unlink(temp_path)
+                    return
+                
+                messagebox.showinfo("Print", "The PDF has been opened in your default viewer. Please use its print function (usually Ctrl+P or Cmd+P).")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not open the PDF file: {e}")
+                # Clean up the temp file if opening fails
+                if os.path.exists(temp_path): os.unlink(temp_path)
+
+        except Exception as e:
+            messagebox.showerror("Print Error", f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()

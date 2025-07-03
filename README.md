@@ -7,11 +7,10 @@ That's why I created this project with a coding vibe.
 
 A simple PDF editor you can freely use and adapt. It basically allows you to do just two things:
 
-Add text to the PDF
+- Add text to the PDF
+- Add images to the PDF
 
-Add images to the PDF
-
-It also includes options to load a PDF, download the edited version, zoom in/out, and undo your last action.
+It also includes options to load a PDF, download the edited version, zoom in/out, undo your last action, and open the PDF in your default viewer to print.
 
 Feel free to use it!
 
@@ -27,6 +26,7 @@ A simple PDF editor built with Python, Tkinter, and PyMuPDF (fitz). This applica
 - **Zoom Functionality**: Zoom in and out for a better view of the document.
 - **Undo**: Revert the last action (adding an image or text).
 - **Save as New PDF**: Save all your edits into a new PDF file without modifying the original.
+- **View to Print**: Open the PDF in your default viewer to print.
 - **Cross-platform**: Works on macOS, Windows, and Linux.
 
 ## Prerequisites
