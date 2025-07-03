@@ -78,6 +78,8 @@ class PDFEditor:
         self.pil_images_for_embed = {}
         self.current_action = None
         self.resizing_rect_id = None
+        self.text_preview_id = None
+        self.text_data_to_place = None
         
         self.create_toolbar()
         self.create_menu()
@@ -271,7 +273,8 @@ class PDFEditor:
         page_info = self.page_layout_info[text_data['page_num']]
         x = page_info['x'] + text_data['rel_x'] * self.zoom_level
         y = page_info['y'] + text_data['rel_y'] * self.zoom_level
-        font_size = int(text_data['size'] * self.zoom_level)
+        # Apply DPI correction factor (PyMuPDF renders at 96 DPI, Tkinter may use 72 DPI)
+        font_size = int(text_data['size'] * self.zoom_level * (72/96))
         self.canvas.create_text(x, y, text=text_data['text'], font=(text_data['font'], font_size), fill=text_data['hex_color'], anchor='nw')
 
     def zoom_in(self, event=None):
@@ -311,11 +314,22 @@ class PDFEditor:
             self.cancel_current_action()
             return
         self.cancel_current_action()
+
+        dialog = TextPropertiesDialog(self.root)
+        if not dialog.result:
+            return
+
+        self.text_data_to_place = dialog.result
+        
         self.current_action = 'text'
-        self.root.title("PDF Editor - Click to add text")
-        self.canvas.config(cursor="xterm")
+        self.root.title("PDF Editor - Move text to position and click to place")
+        self.canvas.config(cursor="tcross")
         self.update_ui_states(action_in_progress='text')
-        self.canvas.bind("<ButtonPress-1>", self.handle_text_click)
+        
+        self.canvas.bind("<Motion>", self.update_text_preview)
+        self.canvas.bind("<ButtonPress-1>", self.finalize_text_placement)
+        self.canvas.bind("<Enter>", self.update_text_preview)
+        self.canvas.bind("<Leave>", self.clear_text_preview)
 
     def cancel_current_action_event(self, event=None):
         if self.current_action:
@@ -326,10 +340,18 @@ class PDFEditor:
         self.canvas.unbind("<ButtonPress-1>")
         self.canvas.unbind("<B1-Motion>")
         self.canvas.unbind("<ButtonRelease-1>")
+        self.canvas.unbind("<Motion>")
+        self.canvas.unbind("<Enter>")
+        self.canvas.unbind("<Leave>")
+
         if self.resizing_rect_id:
             self.canvas.delete(self.resizing_rect_id)
+        
+        self.clear_text_preview()
+
         self.pil_image_to_place = None
         self.resizing_rect_id = None
+        self.text_data_to_place = None
         self.current_action = None
         self.root.title("PDF Editor")
         self.canvas.config(cursor="")
@@ -382,29 +404,57 @@ class PDFEditor:
         self.cancel_current_action()
         self.redraw_canvas()
 
-    def handle_text_click(self, event):
+    def clear_text_preview(self, event=None):
+        if self.text_preview_id:
+            if isinstance(self.text_preview_id, tuple):
+                for item_id in self.text_preview_id:
+                    self.canvas.delete(item_id)
+            else:
+                 self.canvas.delete(self.text_preview_id)
+            self.text_preview_id = None
+
+    def update_text_preview(self, event):
+        self.clear_text_preview()
+        if not self.text_data_to_place: return
+
+        canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+
+        # Apply DPI correction factor for visual consistency
+        font_size = int(self.text_data_to_place['size'] * self.zoom_level * (72/96))
+        text_id = self.canvas.create_text(canvas_x, canvas_y, text=self.text_data_to_place['text'],
+                                          font=(self.text_data_to_place['font'], font_size),
+                                          fill=self.text_data_to_place['hex_color'], anchor='nw')
+        
+        bbox = self.canvas.bbox(text_id)
+        if bbox:
+            rect_id = self.canvas.create_rectangle(bbox, dash=(4, 4), outline='gray')
+            self.text_preview_id = (text_id, rect_id)
+        else:
+            self.text_preview_id = (text_id,)
+
+    def finalize_text_placement(self, event):
+        if not self.text_data_to_place: return
+
         canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         target_page_info = self.get_page_at_coords(canvas_x, canvas_y)
         if not target_page_info:
-            messagebox.showwarning("Placement Error", "Please click on a page to add text.")
+            messagebox.showwarning("Placement Error", "Please place the text on a page.")
             self.cancel_current_action()
             return
 
+        rel_x = (canvas_x - target_page_info['x']) / self.zoom_level
+        rel_y = (canvas_y - target_page_info['y']) / self.zoom_level
+
+        final_text_data = self.text_data_to_place.copy()
+        final_text_data.update({
+            'page_num': target_page_info['page_num'], 
+            'rel_x': rel_x, 'rel_y': rel_y
+        })
+
+        self.text_to_embed.append(final_text_data)
+        self.action_history.append({'type': 'text', 'data': final_text_data})
         self.cancel_current_action()
-        dialog = TextPropertiesDialog(self.root)
-        if dialog.result:
-            res = dialog.result
-            rel_x = (canvas_x - target_page_info['x']) / self.zoom_level
-            rel_y = (canvas_y - target_page_info['y']) / self.zoom_level
-            
-            text_data = {
-                'page_num': target_page_info['page_num'], 'rel_x': rel_x, 'rel_y': rel_y,
-                'text': res['text'], 'font': res['font'], 'size': res['size'],
-                'color': res['color'], 'hex_color': res['hex_color']
-            }
-            self.text_to_embed.append(text_data)
-            self.action_history.append({'type': 'text', 'data': text_data})
-            self.redraw_canvas()
+        self.redraw_canvas()
 
     def get_page_at_coords(self, x, y):
         for info in self.page_layout_info:
