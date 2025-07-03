@@ -1,11 +1,10 @@
 # Xcoco PDF Editor
 
-![Xcoco PDF Editor Screenshot](./assets/screenshot.png)
-
 Are you tired of searching for PDF editors that are either paid, have limited free use, or add annoying watermarks?
 Me too!
 
-That's why I created this project with a coding vibe.
+That's why I created this project with vibe coding ;-)
+![Xcoco PDF Editor Screenshot](./assets/screenshot.png)
 
 A simple PDF editor you can freely use and adapt. It basically allows you to do just two things:
 
