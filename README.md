@@ -20,14 +20,36 @@ A simple PDF editor built with Python, Tkinter, and PyMuPDF (fitz). This applica
 
 ## Features
 
-- **Open and Display PDFs**: Load and view multi-page PDF documents.
-- **Add Images**: Place PNG images anywhere on a page by drawing a rectangle.
+- **Toolbar for Quick Access**: Easily access common actions like adding images, text, and zooming.
+- **Add Images**: Place PNG images anywhere on a page.
 - **Add Text**: Add text with customizable font, size, and color.
-- **Zoom Functionality**: Zoom in and out for a better view of the document.
-- **Undo**: Revert the last action (adding an image or text).
-- **Save as New PDF**: Save all your edits into a new PDF file without modifying the original.
-- **View to Print**: Open the PDF in your default viewer to print.
-- **Cross-platform**: Works on macOS, Windows, and Linux.
+- **Zoom Functionality**: Zoom in and out with buttons and see the current zoom level.
+- **Undo**: Revert the last action.
+- **View to Print**: Opens the edited PDF in your default viewer to print or save.
+- **Keyboard Shortcuts**: Speed up your workflow with keyboard shortcuts.
+
+## Usage
+
+Run the application with the following command:
+
+```bash
+python pdf_editor.py
+```
+
+- Use the **Toolbar** or the **Edit menu** to add images or text.
+- Use the **Toolbar** or the **View menu** to zoom.
+- Use **File > View to Print...** to open the PDF for printing.
+
+### Keyboard Shortcuts
+
+| Action          | macOS     | Windows/Linux |
+| :-------------- | :-------: | :-----------: |
+| Add Image       | `Cmd + I` | `Ctrl + I`    |
+| Add Text        | `Cmd + T` | `Ctrl + T`    |
+| Zoom In         | `Cmd + +` | `Ctrl + +`    |
+| Zoom Out        | `Cmd + -` | `Ctrl + -`    |
+| Undo            | `Cmd + Z` | `Ctrl + Z`    |
+| Cancel Action   | `Escape`  | `Escape`      |
 
 ## Prerequisites
 
@@ -38,8 +60,9 @@ A simple PDF editor built with Python, Tkinter, and PyMuPDF (fitz). This applica
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository_url>
-    cd pdfeditor
+    # Replace with your repository URL
+    git clone https://github.com/xococodeyo/xocopdfeditor.git
+    cd xocopdfeditor
     ```
 
 2.  **Create and activate a virtual environment:**
@@ -58,20 +81,6 @@ A simple PDF editor built with Python, Tkinter, and PyMuPDF (fitz). This applica
     ```bash
     pip install -r requirements.txt
     ```
-
-## Usage
-
-Run the application with the following command:
-
-```bash
-python pdf_editor.py
-```
-
-- Use **File > Open PDF** to load a document.
-- Use the **Edit** menu to add images or text.
-- Use the **View** menu or `Ctrl/Cmd` + `+`/`-` to zoom.
-- Use **Edit > Undo** or `Ctrl/Cmd` + `Z` to undo the last change.
-- Use **File > Save PDF As...** to save your work.
 
 ## Project Structure
 

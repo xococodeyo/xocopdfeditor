@@ -79,9 +79,15 @@ class PDFEditor:
         self.current_action = None
         self.resizing_rect_id = None
         
+        self.create_toolbar()
         self.create_menu()
         self.reset_state()
 
+        control_key = "Command" if platform.system() == "Darwin" else "Control"
+        self.root.bind(f"<{control_key}-t>", lambda event: self.toggle_text_placement())
+        self.root.bind(f"<{control_key}-i>", lambda event: self.toggle_image_placement())
+        
+        self.update_ui_states()
         self.canvas.bind('<Configure>', self.on_canvas_configure)
         self.root.bind('<Escape>', self.cancel_current_action_event)
         self.root.bind('<Control-z>', self.undo_last_action_event)
@@ -91,6 +97,29 @@ class PDFEditor:
         self.root.bind('<Command-minus>', self.zoom_out) # for macOS
         self.root.bind('<Command-z>', self.undo_last_action_event) # for macOS
 
+
+    def create_toolbar(self):
+        self.toolbar = tk.Frame(self.root, bd=1, relief=tk.RAISED)
+        
+        self.add_img_btn = tk.Button(self.toolbar, text="Add Image", command=self.toggle_image_placement)
+        self.add_img_btn.pack(side=tk.LEFT, padx=5, pady=2)
+
+        self.add_text_btn = tk.Button(self.toolbar, text="Add Text", command=self.toggle_text_placement)
+        self.add_text_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        separator = tk.Frame(self.toolbar, height=20, width=1, bg='grey')
+        separator.pack(side=tk.LEFT, padx=10, pady=2, fill='y')
+
+        self.zoom_out_btn = tk.Button(self.toolbar, text="-", command=self.zoom_out)
+        self.zoom_out_btn.pack(side=tk.LEFT, padx=2, pady=2)
+
+        self.zoom_label = tk.Label(self.toolbar, text="100%")
+        self.zoom_label.pack(side=tk.LEFT, padx=2, pady=2)
+
+        self.zoom_in_btn = tk.Button(self.toolbar, text="+", command=self.zoom_in)
+        self.zoom_in_btn.pack(side=tk.LEFT, padx=2, pady=2)
+
+        self.toolbar.pack(side=tk.TOP, fill=tk.X)
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -106,8 +135,9 @@ class PDFEditor:
         # Edit Menu
         self.edit_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Edit", menu=self.edit_menu)
-        self.edit_menu.add_command(label="Add Image...", command=self.toggle_image_placement)
-        self.edit_menu.add_command(label="Add Text...", command=self.toggle_text_placement)
+        control_key = "Cmd" if platform.system() == "Darwin" else "Ctrl"
+        self.edit_menu.add_command(label="Add Image...", command=self.toggle_image_placement, accelerator=f"{control_key}+I")
+        self.edit_menu.add_command(label="Add Text...", command=self.toggle_text_placement, accelerator=f"{control_key}+T")
         self.edit_menu.add_separator()
         self.edit_menu.add_command(label="Undo", command=self.undo_last_action, accelerator="Ctrl+Z")
         # View Menu
@@ -129,9 +159,9 @@ class PDFEditor:
         self.action_history = []
         self.zoom_level = 1.0
         self.cancel_current_action()
-        self.update_menu_states()
+        self.update_ui_states()
 
-    def update_menu_states(self, action_in_progress=None):
+    def update_ui_states(self, action_in_progress=None):
         is_pdf_loaded = self.pdf_document is not None
         base_state = tk.NORMAL if is_pdf_loaded else tk.DISABLED
         
@@ -150,6 +180,24 @@ class PDFEditor:
             self.edit_menu.entryconfig(1, label="Add Text...", state=base_state)
 
         self.edit_menu.entryconfig(3, state=tk.NORMAL if self.action_history else tk.DISABLED)
+
+        # Toolbar states
+        self.zoom_in_btn.config(state=base_state)
+        self.zoom_out_btn.config(state=base_state if self.zoom_level > self.zoom_step else tk.DISABLED)
+        self.zoom_label.config(text=f"{int(self.zoom_level * 100)}%")
+
+        if action_in_progress == 'image':
+            self.edit_menu.entryconfig(0, label="Cancel Image Placement")
+            self.add_img_btn.config(text="Cancel", state=tk.NORMAL)
+            self.add_text_btn.config(state=tk.DISABLED)
+        elif action_in_progress == 'text':
+            self.edit_menu.entryconfig(1, label="Cancel Text Placement")
+            self.add_text_btn.config(text="Cancel", state=tk.NORMAL)
+            self.add_img_btn.config(state=tk.DISABLED)
+        else:
+            self.edit_menu.entryconfig(0, label="Add Image...", state=base_state)
+            self.add_img_btn.config(text="Add Image", state=base_state)
+            self.add_text_btn.config(text="Add Text", state=base_state)
 
     def on_canvas_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -200,7 +248,7 @@ class PDFEditor:
                 self.draw_embedded_text(item['data'])
         
         self.on_canvas_configure(None)
-        self.update_menu_states()
+        self.update_ui_states()
 
     def draw_embedded_image(self, img_data):
         page_info = self.page_layout_info[img_data['page_num']]
@@ -250,7 +298,7 @@ class PDFEditor:
             self.image_path_to_embed = image_path
             self.root.title(f"PDF Editor - Draw rectangle for: {os.path.basename(image_path)}")
             self.canvas.config(cursor="crosshair")
-            self.update_menu_states(action_in_progress='image')
+            self.update_ui_states(action_in_progress='image')
             self.canvas.bind("<ButtonPress-1>", self.start_resize)
             self.canvas.bind("<B1-Motion>", self.do_resize)
             self.canvas.bind("<ButtonRelease-1>", self.end_resize)
@@ -266,7 +314,7 @@ class PDFEditor:
         self.current_action = 'text'
         self.root.title("PDF Editor - Click to add text")
         self.canvas.config(cursor="xterm")
-        self.update_menu_states(action_in_progress='text')
+        self.update_ui_states(action_in_progress='text')
         self.canvas.bind("<ButtonPress-1>", self.handle_text_click)
 
     def cancel_current_action_event(self, event=None):
@@ -285,7 +333,7 @@ class PDFEditor:
         self.current_action = None
         self.root.title("PDF Editor")
         self.canvas.config(cursor="")
-        self.update_menu_states()
+        self.update_ui_states()
 
     def start_resize(self, event):
         if self.current_action != 'image': return
