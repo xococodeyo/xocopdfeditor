@@ -1,4 +1,21 @@
-# PDF Editor
+# Xcoco PDF Editor
+
+Are you tired of searching for PDF editors that are either paid, have limited free use, or add annoying watermarks?
+Me too!
+
+That's why I created this project with a coding vibe.
+
+A simple PDF editor you can freely use and adapt. It basically allows you to do just two things:
+
+Add text to the PDF
+
+Add images to the PDF
+
+It also includes options to load a PDF, download the edited version, zoom in/out, and undo your last action.
+
+Feel free to use it!
+
+---
 
 A simple PDF editor built with Python, Tkinter, and PyMuPDF (fitz). This application allows you to open PDF files, add images and text, and save the changes to a new PDF.
 
