@@ -565,7 +565,10 @@ class PDFEditor:
                                   fontsize=item['size'], 
                                   color=item['color'])
 
-            doc.save(save_path)
+            if save_path == self.file_path:
+                doc.save(save_path, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+            else:
+                doc.save(save_path)
             doc.close()
 
             if not is_temporary_save:
@@ -616,7 +619,7 @@ class PDFEditor:
 
     def _on_closing(self):
         if self.action_history:
-            response = messagebox.askyesnocancel(self._("confirm_exit_title"), self._("confirm_exit_content"))
+            response = messagebox.askyesnocancel(self._("confirm_exit_title"), self._("save_changes_prompt"))
             if response is True:
                 if self._save_document():
                     self.root.destroy()
